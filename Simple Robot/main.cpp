@@ -8,173 +8,18 @@
 #include <SDL2/SDL_opengl.h>
 
 #include <iostream>
-#include <string>
-#include <vector>
 #include <cmath>
 
-#include "./imgui/imgui.h"
-#include "./imgui/backends/imgui_impl_sdl2.h"
-#include "./imgui/backends/imgui_impl_opengl2.h"
+#include "joint.h"
+#include "body.h"
+#include "constants.h"
 
-#include "Eigen/Dense"
-#include "Eigen/Geometry"
-
-//Screen dimension constants
-const int SCREEN_WIDTH = 1280;
-const int SCREEN_HEIGHT = 720;
-
-class Compoment;
-class Joint;
-class Body;
-
-struct Shape{
-    ImVec2 topLeft, topRight, bottomLeft, bottomRight;
-};
-
-
-class Compoment {
-public:
-    Compoment(std::string fmt, float w, float h):
-    width(w), height(h), name(fmt),  x(0), y(0)
-    {
-        color = IM_COL32(rand() % 255, rand() % 255, rand() % 255, 255);
-    }
-    
-    
-    int getWidth() const { return width; }
-    int getHeight() const { return height; }
-    float getX() const { return x; }
-    float getY() const { return y; }
-    float getAngle() const { return angle; }
-    Shape getShape() {
-        return shape;
-    }
-    
-    bool fixed = false;
-    bool isChild = false;
-    
-    
-    void setPosition(float newX, float newY) {
-        x = newX;
-        y = newY;
-    }
-    
-    void setAngle(float newAngle) { angle = newAngle; }
-    void setShape(ImVec2 newtopLeft, ImVec2 newtopRight, ImVec2 newbottomLeft, ImVec2 newbottomRight) {
-        shape.topLeft = newtopLeft;
-        shape.topRight = newtopRight;
-        shape.bottomLeft = newbottomLeft;
-        shape.bottomRight = newbottomRight;
-    }
-    
-    std::string getName() const { return name; }
-    
-    ImU32 getColor() const { return color; }
-    float angle;
-    
-    Eigen::Vector2f pivot;
-    
-    void setPivot(Eigen::Vector2f newPivot) { pivot = newPivot; }
-    
-    std::vector<Compoment*> children;
-    
-protected:
-    Shape shape;
-    ImU32 color;
-    std::string name;
-    float width;
-    float height;
-    float x;
-    float y;
-};
-
-class Body: public Compoment {
-public:
-    Body(std::string fmt, float w, float h):
-    Compoment(fmt, w, h) {}
-    
-    void update() {
-        ImGui::Begin(name.c_str());
-        
-        ImGui::BeginDisabled(fixed || isChild);
-        ImGui::SliderFloat("x", &x, 0.0f, SCREEN_WIDTH / 2);
-        ImGui::SliderFloat("y", &y, 0.0f, SCREEN_HEIGHT);
-        ImGui::EndDisabled();
-        
-        ImGui::SliderFloat("Width", &width, 0.0f, 200.0f);
-        ImGui::SliderFloat("Height", &height, 0.0f, 200.0f);
-        ImGui::SliderFloat("angle", &angle, 0.0f, EIGEN_PI * 2);
-        ImGui::Spacing();
-        
-        ImGui::Checkbox("Is component fixed ", &fixed);
-        
-        ImGui::End();
-        
-        Eigen::Matrix<float, 2, 4> rectangle;
-        rectangle << x - width / 2,  x + width / 2, x + width / 2, x - width / 2,
-        y - height / 2, y - height / 2, y + height / 2, y + height / 2;
-        
-        // Create the 2D rotation matrix
-        Eigen::Matrix2f rotation;
-        rotation << std::cos(angle), -std::sin(angle),
-        std::sin(angle),  std::cos(angle);
-        
-        Eigen::Vector2f p(x, y);
-        //p += pivot;
-        
-        Eigen::Matrix<float, 2, 4> translatedRectangle = rectangle.colwise() - pivot;
-        
-        Eigen::Matrix<float, 2, 4> rotatedRectangle = rotation * translatedRectangle;
-        
-        Eigen::Matrix<float, 2, 4> finalRectangle = rotatedRectangle.colwise() + pivot;
-        
-        
-        this->setShape(ImVec2(finalRectangle(0, 0), finalRectangle(1, 0)),
-                       ImVec2(finalRectangle(0, 1), finalRectangle(1, 1)),
-                       ImVec2(finalRectangle(0, 2), finalRectangle(1, 2)),
-                       ImVec2(finalRectangle(0, 3), finalRectangle(1, 3)));
-        
-        for (Compoment* child: children){
-            child->setPosition(this->shape.bottomRight.x + abs(this->shape.bottomLeft.x - this->shape.bottomRight.x) / 2,
-                               this->shape.bottomLeft.y + abs(this->shape.bottomLeft.y - this->shape.bottomRight.y) / 2);
-            child->setPivot(Eigen::Vector2f(x, y));
-        }
-    }
-};
-
-
-class Joint: public Compoment {
-public:
-    Joint(std::string fmt, float w, float h): Compoment(fmt, w, h) {}
-    
-    void update() {
-        ImGui::Begin(name.c_str());
-        
-        ImGui::BeginDisabled(fixed || isChild);
-        ImGui::SliderFloat("x", &x, 0.0f, SCREEN_WIDTH / 2);
-        ImGui::SliderFloat("y", &y, 0.0f, SCREEN_HEIGHT);
-        ImGui::EndDisabled();
-        
-        ImGui::SliderFloat("Radius", &radius, 10.0f, 100.0f);
-        ImGui::Spacing();
-        
-        ImGui::End();
-        
-        width = height = radius;
-        
-        this->setShape(ImVec2(x - radius, y + radius), ImVec2(x + radius, y + radius), ImVec2(x - radius, y - radius), ImVec2(x + radius, y - radius));
-        
-        for (Compoment* child: children){
-            child->setPosition(this->shape.bottomRight.x + abs(this->shape.bottomLeft.x - this->shape.bottomRight.x) / 2,
-                               this->shape.bottomLeft.y + abs(this->shape.bottomLeft.y - this->shape.bottomRight.y) / 2);
-            child->setPivot(Eigen::Vector2f(x, y));
-        }
-        
-    }
-    
-    float radius = 10.0f;
-    
-};
+//class RevolutJoint: public Joint {
+//public:
+//    RevolutJoint(): Joint()
+//    {}
+//    
+//};
 
 class EndEffector: public Compoment {
 public:
@@ -185,20 +30,22 @@ public:
 
 class SimpleRobot final {
 public:
-    SimpleRobot(float x_pos, float y_pos):
-    x(x_pos), y(y_pos)
+    SimpleRobot()
     {}
     
     void connect(Joint* j, Body* b) {
         if(!jointVector.empty() || !bodyVector.empty()){
-            b->setPosition(j->getX(), j->getY() + b->getHeight() / 2);
+            j->connect(b);
+            //b->setPosition(j->getX(), j->getY() + b->getHeight() / 2);
             b->isChild = true;
             j->children.push_back(b);
         }
     }
     void connect(Body* b, Joint* j) {
+        std::cout << "Connect joint to body" << std::endl;
         if(!jointVector.empty() || !bodyVector.empty()){
-            j->setPosition(b->getX(), b->getY() + b->getHeight() / 2);
+            j->connect(b);
+            //j->setPosition(b->getShape().topLeft.x, b->getY() + b->getHeight() / 2);
             j->isChild = true;
             b->children.push_back(j);
         }
@@ -217,7 +64,7 @@ public:
     }
     
     Joint* addJoint() {
-        Joint* j = new Joint(std::string("Joint") + std::to_string(jointIdx),joint_width, joint_height);
+        Joint* j = new Joint(std::string("Joint") + std::to_string(jointIdx), joint_radius);
         jointVector.push_back(j);
         jointIdx++;
         return j;
@@ -240,24 +87,25 @@ public:
         return jointVector;
     }
     
-    void draw(ImDrawList* dl, ImVec2 windowPos) {
+    void draw(ImDrawList* dl) {
         for (Body* b : bodyVector) {
-            ImVec2 top_left = ImVec2(b->getShape().topLeft.x + windowPos.x,b->getShape().topLeft.y + windowPos.y);
-            ImVec2 top_right = ImVec2(b->getShape().topRight.x + windowPos.x,b->getShape().topRight.y + windowPos.y);
-            ImVec2 bottom_right = ImVec2(b->getShape().bottomRight.x + windowPos.x,b->getShape().bottomRight.y + windowPos.y);
-            ImVec2 bottom_left =  ImVec2(b->getShape().bottomLeft.x + windowPos.x,b->getShape().bottomLeft.y + windowPos.y);
+            ImVec2 top_left = ImVec2(b->getShape().topLeft.x, b->getShape().topLeft.y);
+            ImVec2 top_right = ImVec2(b->getShape().topRight.x,b->getShape().topRight.y);
+            ImVec2 bottom_right = ImVec2(b->getShape().bottomRight.x, b->getShape().bottomRight.y);
+            ImVec2 bottom_left =  ImVec2(b->getShape().bottomLeft.x,b->getShape().bottomLeft.y);
             
             //            ImVec2 top_left = ImVec2(windowPos.x + b->getWidth() + b->getX(), windowPos.y + b->getHeight() + b->getY());
             //            ImVec2 top_right = ImVec2(windowPos.x + b->getX(), windowPos.y + b->getHeight() + b->getY());
             //            ImVec2 bottom_left = ImVec2(windowPos.x + b->getWidth() + b->getX(),windowPos.y + b->getY());
             //            ImVec2 bottom_right = ImVec2(windowPos.x + b->getX(), windowPos.y + b->getY());
             
-            dl->AddQuadFilled(top_left, top_right, bottom_left, bottom_right, b->getColor());
+            dl->AddQuadFilled(top_left, top_right, bottom_right, bottom_left, b->getColor());
         }
         for (Joint* j : jointVector) {
-            ImVec2 center = ImVec2(windowPos.x + j->getX(), windowPos.y + j->getY());
+            ImVec2 center = ImVec2(j->getX(), j->getY());
             
-            dl->AddCircleFilled(center, j->radius, j->getColor());
+            dl->AddCircleFilled(center, j->getRadius(), j->getColor());
+            dl->AddLine(center, ImVec2(center.x + j->getRadius(), center.y), IM_COL32(0, 255, 0, 255), 5);
         }
     }
     
@@ -268,15 +116,11 @@ public:
     }
     
 private:
-    
-    float x;
-    float y;
     int bodyIdx = 1;
     int jointIdx = 1;
     int body_width = 20;
     int body_height = 100;
-    int joint_width = 20;
-    int joint_height = 100;
+    int joint_radius = 20;
     
     std::vector<Body*> bodyVector;
     std::vector<Joint*> jointVector;
@@ -332,7 +176,7 @@ int main( int argc, char* args[] )
     
     ImVec4 clear_color = ImVec4(1, 1, 1, 1.00f);
     
-    SimpleRobot robot = SimpleRobot(SCREEN_WIDTH / 2, 0);
+    SimpleRobot robot = SimpleRobot();
     
     // Main loop
     bool done = false;
@@ -366,7 +210,7 @@ int main( int argc, char* args[] )
             static int current_body = 0;
             static int current_joint = 0;
             
-            ImGui::SetWindowPos(ImVec2(0, 0));
+            ImGui::SetWindowPos(ImVec2(SCREEN_WIDTH / 2, 0));
             ImGui::SetWindowSize(ImVec2(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2));
             
             if(ImGui::Button("Add body")) {
@@ -399,10 +243,10 @@ int main( int argc, char* args[] )
         }
         {
             ImGui::Begin("Drawing", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
-            ImGui::SetWindowPos(ImVec2(SCREEN_WIDTH / 2, 0));
+            ImGui::SetWindowPos(ImVec2(0, 0));
             ImGui::SetWindowSize(ImVec2(SCREEN_WIDTH / 2, SCREEN_HEIGHT));
             
-            robot.draw(ImGui::GetWindowDrawList(), ImGui::GetWindowPos());
+            robot.draw(ImGui::GetWindowDrawList());
             
             ImGui::End();
         }
@@ -429,3 +273,4 @@ int main( int argc, char* args[] )
     
     return 0;
 }
+
