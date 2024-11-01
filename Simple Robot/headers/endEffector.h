@@ -1,0 +1,4 @@
+
+class EndEffector: public Link {
+    
+}
