@@ -295,6 +295,7 @@
 					"$(PROJECT_DIR)",
 					"$(PROJECT_DIR)/Simple\\ Robot",
 					"$(PROJECT_DIR)/Simple\\ Robot",
+					"$(PROJECT_DIR)/Simple\\ Robot",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
@@ -335,6 +336,7 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Simple\\ Robot",
 					"$(PROJECT_DIR)/Simple\\ Robot",
 					"$(PROJECT_DIR)/Simple\\ Robot",
 				);

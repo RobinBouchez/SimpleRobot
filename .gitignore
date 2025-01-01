@@ -13,3 +13,6 @@ test 2024-10-22 00-29-15
 .MD
 
 *.md
+Simple Robot/Eigen
+Simple Robot/SDL2.framework
+Simple Robot/imgui
